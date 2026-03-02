@@ -1,7 +1,7 @@
 export default function ReportsAnalytics() {
   return (
     <div className="w-full flex flex-col pb-4 animate-in duration-300">
-      <h1 className="text-4xl font-semibold text-[#b81d24] mb-8 tracking-wide">
+      <h1 className="text-3xl font-bold text-[#b81d24] mb-8 tracking-wide">
         Reports & Analytics
       </h1>
 
@@ -39,20 +39,15 @@ export default function ReportsAnalytics() {
         
         {/* Bottom Left: 6/12 */}
         <div className="w-full lg:w-6/12 bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex flex-col">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 leading-tight">Deep Dive<br/>Analytics</h2>
-          <div className="flex items-end gap-3 mb-4">
-            <span className="text-6xl font-black text-gray-900 tracking-tighter">24.8k</span>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Revenues</h2>
+          <div className="flex items-end gap-3 mb-2">
+            <span className="text-5xl font-bold text-gray-900 tracking-tight">15%</span>
+            <span className="text-2xl text-green-500 font-medium pb-1">&#8599;</span>
           </div>
-          <p className="text-gray-600 text-base leading-relaxed mb-12">
-            Detailed breakdown of user engagement across all platforms. 
-          </p>
-          
-          <div className="mt-auto">
-             <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#b81d24] h-full w-[70%] rounded-full"></div>
-             </div>
-             <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest">Target Reach: 70%</p>
-          </div>
+          <p className="text-gray-500 text-sm mb-auto">Increase compared to last week</p>
+          <button className="text-[#9c6f37] text-sm font-medium hover:underline text-left mt-8 w-fit">
+            Revenues report &rarr;
+          </button>
         </div>
 
         {/* Bottom Right: Growth Chart & Summaries 6/12 */}
