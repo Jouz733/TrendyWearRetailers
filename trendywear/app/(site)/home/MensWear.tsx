@@ -7,7 +7,6 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from 'next/navigation';
 
-
 const BUCKET_NAME = "images";
 
 type MensProduct = {
@@ -89,22 +88,36 @@ export default function MensWear() {
           {/* SCROLL CONTAINER */}
           <div className="flex items-center gap-6 px-6 py-8 overflow-x-auto hide-scrollbar scroll-smooth fade-edge-right">
               {loading ? (
-                <p className="text-slate-400 text-sm px-4">Loading...</p>
+                /* SKELETON LOADERS */
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div key={`skeleton-${index}`} className="shrink-0 w-[280px] sm:w-[300px]">
+                    {/* Image Skeleton */}
+                    <div className="aspect-[3.5/4] rounded-3xl bg-slate-200/60 animate-pulse mb-5"></div>
+                    {/* Text Skeletons */}
+                    <div className="space-y-3">
+                      <div className="h-6 bg-slate-200/60 rounded animate-pulse w-3/4"></div>
+                      <div className="h-5 bg-slate-200/60 rounded animate-pulse w-1/3"></div>
+                    </div>
+                  </div>
+                ))
               ) : mensWearData.length === 0 ? (
                 <p className="text-slate-400 text-sm px-4">No items found.</p>
               ) : (
-              mensWearData.map((item) => (
+              mensWearData.map((item, index) => (
                 <div 
                   key={item.id} 
-                  className="shrink-0 w-[280px] sm:w-[300px] group cursor-pointer"
+                  className="shrink-0 w-[280px] sm:w-[300px] group cursor-pointer animate-fade-in-up opacity-0"
+                  style={{ 
+                    animationDelay: `${index * 150}ms`, // Staggers the animation by 150ms per card
+                    animationFillMode: 'forwards'       // Ensures they stay visible after animating
+                  }}
                   onClick={() => router.push(`/products/${item.id}`)} 
-
                 >
                   <div className="aspect-[3.5/4] rounded-3xl overflow-hidden mb-5 relative transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-black/20">
                     
                     {/* IMAGE */}
                     <Image
-                      src={item.image}         
+                      src={item.image}        
                       alt={item.name}
                       fill                      
                       className="object-cover"  
@@ -167,7 +180,7 @@ export default function MensWear() {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-       .fade-edge-right {
+        .fade-edge-right {
           -webkit-mask-image: linear-gradient(to left, transparent 0%, black 5%);
           mask-image: linear-gradient(to left, transparent 0%, black 5%);
         }

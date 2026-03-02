@@ -10,10 +10,16 @@ export default function Collections() {
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <h2 className="text-3xl md:text-4xl font-medium">
+          <h2 
+            className="text-3xl md:text-4xl font-medium animate-fade-in-up opacity-0"
+            style={{ animationDelay: '0ms', animationFillMode: 'forwards' }}
+          >
             Collection for all seasons.
           </h2>
-          <p className="font-light text-xl">
+          <p 
+            className="font-light text-xl animate-fade-in-up opacity-0"
+            style={{ animationDelay: '150ms', animationFillMode: 'forwards' }}
+          >
             A versatile foundation for every day. Our Collection for All Seasons blends 
             minimalist design with year-round durability, offering timeless essentials 
             engineered to transition effortlessly through any climate.
@@ -31,7 +37,11 @@ export default function Collections() {
           return (
             <div
               key={item.id}
-              className={`${mtClass} w-1/2 sm:w-1/2 md:w-1/4 lg:w-1/5 px-3 mb-6 flex-shrink-0`}
+              className={`${mtClass} w-1/2 sm:w-1/2 md:w-1/4 lg:w-1/5 px-3 mb-6 flex-shrink-0 animate-fade-in-up opacity-0`}
+              style={{ 
+                animationDelay: `${(index + 2) * 150}ms`, // Starts at 300ms, then 450ms, etc.
+                animationFillMode: 'forwards' 
+              }}
             >
               <div className="aspect-[3/4] rounded-2xl transition duration-300 cursor-pointer relative group overflow-hidden">
                 <Image

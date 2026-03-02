@@ -18,14 +18,24 @@ export default function Hero() {
         <div className="flex flex-col lg:flex-row gap-4 h-[500px] mb-12">
           
           {/* LEFT: Large Feature Card */}
-          <div className="lg:flex-[2] relative flex-1 rounded-2xl overflow-hidden">
+          <div 
+            className="lg:flex-[2] relative flex-1 rounded-2xl overflow-hidden animate-fade-in-up opacity-0"
+            style={{ animationDelay: '0ms', animationFillMode: 'forwards' }}
+          >
             <Carousel slides={heroSlides} interval={4000} />
           </div> 
 
           {/* RIGHT: Stacked Small Cards */}
           <div className="flex-1 flex flex-col gap-6">
-            {stackedCards.map((card) => (
-              <div key={card.id} className="relative flex-1 rounded-2xl overflow-hidden group">
+            {stackedCards.map((card, index) => (
+              <div 
+                key={card.id} 
+                className="relative flex-1 rounded-2xl overflow-hidden group animate-fade-in-up opacity-0"
+                style={{ 
+                  animationDelay: `${(index + 1) * 150}ms`, // Starts at 150ms, then 300ms
+                  animationFillMode: 'forwards' 
+                }}
+              >
                 <Image
                   src={card.image}
                   alt={card.title}
@@ -47,9 +57,22 @@ export default function Hero() {
 
         {/* BOTTOM: Category Links */}
         <div className="flex flex-col md:flex-row gap-8">
-          <CategoryLink title="Best Selling" href="/best-selling" />
-          <CategoryLink title="Women's Wear" href="/womens" />
-          <CategoryLink title="Men's Wear" href="/mens" />
+          {[
+            { title: "Best Selling", href: "/best-selling" },
+            { title: "Women's Wear", href: "/womens" },
+            { title: "Men's Wear", href: "/mens" }
+          ].map((link, index) => (
+             <div 
+               key={link.title}
+               className="flex-1 animate-fade-in-up opacity-0"
+               style={{ 
+                 animationDelay: `${(index + 3) * 150}ms`, // Starts at 450ms
+                 animationFillMode: 'forwards' 
+               }}
+             >
+               <CategoryLink title={link.title} href={link.href} />
+             </div>
+          ))}
         </div>
 
       </div>

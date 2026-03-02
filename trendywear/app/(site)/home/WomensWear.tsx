@@ -101,19 +101,34 @@ export default function WomensWearScroll() {
           {/* Scrollable  */}
           <div className="w-full flex items-center gap-6 px-6 py-8 overflow-x-auto hide-scrollbar scroll-smooth fade-edge-left">
               {loading ? (
-                <p className="text-slate-400 text-sm px-4">Loading...</p>
+                /* SKELETON LOADERS (Using bg-white/20 to match the red background) */
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div key={`skeleton-${index}`} className="shrink-0 w-[280px] sm:w-[300px]">
+                    {/* Image Skeleton */}
+                    <div className="aspect-[3.5/4] rounded-3xl bg-white/20 animate-pulse mb-5"></div>
+                    {/* Text Skeletons */}
+                    <div className="space-y-3">
+                      <div className="h-6 bg-white/20 rounded animate-pulse w-3/4"></div>
+                      <div className="h-5 bg-white/20 rounded animate-pulse w-1/3"></div>
+                    </div>
+                  </div>
+                ))
               ) : womensWearData.length === 0 ? (
                 <p className="text-slate-400 text-sm px-4">No items found.</p>
               ) :  (
-              womensWearData.map((item) => (
+              womensWearData.map((item, index) => (
                 <div 
                   key={item.id} 
-                  className="shrink-0 w-[280px] sm:w-[300px] group cursor-pointer"
+                  className="shrink-0 w-[280px] sm:w-[300px] group cursor-pointer animate-fade-in-up opacity-0"
+                  style={{ 
+                    animationDelay: `${index * 150}ms`, 
+                    animationFillMode: 'forwards'       
+                  }}
                   onClick={() => router.push(`/products/${item.id}`)} 
                 >
                   <div className="aspect-[3.5/4] bg-neutral-100 rounded-3xl overflow-hidden mb-5 relative transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-black/20">    
                     <Image
-                      src={item.image}         
+                      src={item.image}        
                       alt={item.name}
                       fill                      
                       className="object-cover"  
