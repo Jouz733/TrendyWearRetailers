@@ -93,6 +93,7 @@ export default function ShoppingCart() {
             <div className="flex flex-col">
               {cartItems.length > 0 ? (
                 cartItems.map((item) => {
+                  console.log(item);
                   const itemTotal = item.price * item.quantity;
                   
                   return (

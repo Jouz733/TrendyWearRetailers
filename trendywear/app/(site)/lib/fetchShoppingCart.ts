@@ -51,6 +51,7 @@ export async function fetchShoppingCart(): Promise<ShoppingCartItem[]> {
   }
 
   const itemIds = cart_items.map(i => i.item.id);
+  const now = new Date().toISOString();
 
   const { data: wishlisted } = await supabase
     .from("wishlist")
@@ -65,6 +66,21 @@ export async function fetchShoppingCart(): Promise<ShoppingCartItem[]> {
     }
   }
 
+  const { data: prices } = await supabase
+      .from("prices")
+      .select("item_id, price")
+      .in("item_id", itemIds)
+      .lte("valid_from", now)
+      .or(`valid_to.is.null,valid_to.gte.${now}`)
+      .order("priority", { ascending: false });
+
+  const priceMap: Record<number, number> = {};
+  if (prices) {
+      for (const p of prices) {
+          if (!(p.item_id in priceMap)) priceMap[p.item_id] = p.price;
+      }
+  }
+
   const mapped: ShoppingCartItem[] = cart_items.map((ci) => {
     const imageUrls = (ci.item.image_id ?? []).map(
       (imgId: string) =>
@@ -75,7 +91,7 @@ export async function fetchShoppingCart(): Promise<ShoppingCartItem[]> {
       id: ci.id,
       name: ci.item.name ?? "Unnamed",
       category: ci.item.tags,
-      price: 0, // you'd fetch from prices table properly
+      price: priceMap[ci.item.id] ?? 0,
       quantity: ci.quantity,
       size: 'N/A',
       color: 'N/A',
