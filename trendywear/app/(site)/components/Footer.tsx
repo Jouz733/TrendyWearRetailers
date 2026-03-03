@@ -1,6 +1,13 @@
+"use client"
+
 import Link from 'next/link';
+import { useUser } from "../context/UserContext"; 
+import { useRouter } from "next/navigation";
 
 export default function Footer() {
+  const { user } = useUser();
+  const router = useRouter();
+
   const footerColumns = [
     {
       title: "Shop",
@@ -55,12 +62,27 @@ export default function Footer() {
               <ul className="space-y-8 text-sm text-red-50">
                 {col.links.map((link, i) => (
                   <li key={i}>
-                    <Link
-                      href={link.href}
-                      className="hover:text-white hover:underline transition"
-                    >
-                      {link.label}
-                    </Link>
+                    {col.title === "Account" && ["My Orders", "Shopping Cart"].includes(link.label) ? (
+                      <button
+                        onClick={() => {
+                          if (!user) {
+                            router.push("/login"); // redirect if not logged in
+                          } else {
+                            router.push(link.href);
+                          }
+                        }}
+                        className="hover:text-white hover:underline transition text-left w-full"
+                      >
+                        {link.label}
+                      </button>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="hover:text-white hover:underline transition"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
