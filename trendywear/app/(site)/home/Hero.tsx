@@ -165,9 +165,9 @@ export default function Hero() {
         {/* BOTTOM: Category Links */}
         <div className="flex flex-col md:flex-row gap-8">
           {[
-            { title: "Best Selling", href: "/best-selling" },
-            { title: "Women's Wear", href: "/womens" },
-            { title: "Men's Wear", href: "/mens" }
+            { title: "Best Selling", href: "/sales" },
+            { title: "Women's Wear", href: "/products-page?category=Women" },
+            { title: "Men's Wear", href: "/products-page?category=Men" }
           ].map((link, index) => (
              <div 
                key={link.title}

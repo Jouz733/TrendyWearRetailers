@@ -7,6 +7,9 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from 'next/navigation';
 import { addToWishlist } from "@/app/actions/user/AddToWishlist";
+import { removeFromWishlist } from "@/app/actions/user/RemoveFromWishlist";
+import { fetchFavorites } from "../lib/fetchFavorites";
+import TopModal from "../components/TopModal";
 
 const BUCKET_NAME = "images";
 
@@ -21,6 +24,7 @@ export default function MensWear() {
   const [mensWearData, setMensWearData] = useState<MensProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [wishlist, setWishlist] = useState<number[]>([]);
+  const [modal, setModal] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -70,14 +74,65 @@ export default function MensWear() {
       });
 
       setMensWearData(mapped);
+      
+      const user = (await supabase.auth.getSession()).data.session?.user.id
+      if (user){
+        try {
+          const favorites = await fetchFavorites();
+          const favoriteIds = favorites.map(f => f.id);
+          setWishlist(favoriteIds);
+        } catch (err) {
+          console.error("Error fetching favorites:", err);
+        }
+      }
       setLoading(false);
     }
 
     fetchMensWear();
   }, []);
 
+
+  const handleWishlist = async (itemId: number) => {
+    if (wishlist.includes(itemId)) {
+      // remove
+      try {
+        const res = await removeFromWishlist(itemId);
+        if (res?.success) {
+          setWishlist(prev => prev.filter(id => id !== itemId));
+          setModal({ message: "Removed from wishlist", type: "success" });
+        } else {
+          setModal({ message: "Failed to remove from wishlist", type: "error" });
+        }
+      } catch (err) {
+        console.error(err);
+        setModal({ message: "Failed to remove from wishlist", type: "error" });
+      }
+    } else {
+      // add
+      try {
+        const res = await addToWishlist(itemId);
+        if (res?.success) {
+          setWishlist(prev => [...prev, itemId]);
+          setModal({ message: "Added to wishlist", type: "success" });
+        } else {
+          setModal({ message: "Failed to add to wishlist", type: "error" });
+        }
+      } catch (err) {
+        console.error(err);
+        setModal({ message: "Failed to add to wishlist", type: "error" });
+      }
+    }
+  };
+
   return (
     <section className="w-full bg-[#f8f9fa] py-8 sm:py-16 overflow-hidden">
+      {modal && (
+        <TopModal
+          message={modal.message}
+          type={modal.type}
+          onClose={() => setModal(null)}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-8">
         {/* Top Divider */}
         <div className="border-t border-slate-300 w-full mb-8 sd:mb-12"/>
@@ -93,9 +148,7 @@ export default function MensWear() {
                 /* SKELETON LOADERS */
                 Array.from({ length: 4 }).map((_, index) => (
                   <div key={`skeleton-${index}`} className="shrink-0 w-[280px] sm:w-[300px]">
-                    {/* Image Skeleton */}
                     <div className="aspect-[3.5/4] rounded-3xl bg-slate-200/60 animate-pulse mb-5"></div>
-                    {/* Text Skeletons */}
                     <div className="space-y-3">
                       <div className="h-6 bg-slate-200/60 rounded animate-pulse w-3/4"></div>
                       <div className="h-5 bg-slate-200/60 rounded animate-pulse w-1/3"></div>
@@ -127,23 +180,20 @@ export default function MensWear() {
                     />
                     
                     {/* WISHLIST BUTTON */}
-                    <button 
+                    <button
                       title="Heart"
                       type="button"
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        if (!wishlist.includes(item.id)) {
-                          try {
-                            await addToWishlist(item.id);
-                            setWishlist([...wishlist, item.id]);
-                          } catch (err) {
-                            console.error("Failed to add to wishlist", err);
-                          }
-                        }
+                        handleWishlist(item.id);
                       }}
                       className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors text-slate-900"
                     >
-                      {wishlist.includes(item.id) ? <MdFavorite size={20} className="text-red-500" /> : <MdFavoriteBorder size={20} />}
+                      {wishlist.includes(item.id) ? (
+                        <MdFavorite size={20} className="text-red-500" />
+                      ) : (
+                        <MdFavoriteBorder size={20} />
+                      )}
                     </button>
                   </div>
 
@@ -173,7 +223,9 @@ export default function MensWear() {
           </div>
           
           <div className="pt-12 lg:pt-0 pb-1 border-b inline-flex items-center gap-2 w-fit cursor-pointer group">
-            <span className="text-xl font-medium group-hover:text-black-100 transition">View All Product</span>
+            <Link href="/products-page?category=Men">
+              <span className="text-xl font-medium group-hover:text-black-100 transition">View All Product</span>
+            </Link>
             <MdArrowOutward className="text-2xl group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform ml-4" />
           </div>
         </div>

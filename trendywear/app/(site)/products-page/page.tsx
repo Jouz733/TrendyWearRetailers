@@ -12,14 +12,16 @@ const BUCKET_NAME = "images";
 
 export default function Page() {
   const [selectedSize, setSelectedSize] = useState("XS");
-  const [activeCategory, setActiveCategory] = useState();
   const [searchQuery, setSearchQuery] = useState<string|null>();
   const [activePage, setActivePage] = useState(1);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   const searchParams = useSearchParams();
-  
+  const initialCategory = searchParams.get('category') || undefined;
+  const [activeCategory, setActiveCategory] = useState<string | undefined>(initialCategory);
+
+
   // ✅ sub-category state
   const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>(
     []
@@ -54,22 +56,14 @@ export default function Page() {
 
   const categories = ["Men","Women","Tops", "Bottoms", "Shirt", "Dress"];
 
-  useEffect(() => {
-    fetchProducts(searchParams.get('search'),searchParams.get('tags'))
+    useEffect(() => {
+    setLoading(true);
+    fetchProducts(searchQuery, activeCategory)
       .then(setProducts)
       .catch((err) => console.error("Error fetching products:", err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeCategory, searchQuery]);
 
-  useEffect(()=>{
-    if (activeCategory){
-      fetchProducts(searchParams.get('search'),activeCategory)
-      .then(setProducts)
-      .catch((err) => console.error("Error fetching products:", err))
-      .finally(() => setLoading(false));
-    }
-    
-  },[activeCategory])
 
   return (
     <div className="min-h-screen bg-[#F8F9FB]">

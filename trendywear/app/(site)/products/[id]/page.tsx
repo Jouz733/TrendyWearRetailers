@@ -9,6 +9,9 @@ import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { addToCart } from "@/app/actions/user/AddToCart";
+import TopModal from "../../components/TopModal";
+import { useCart } from "@/app/(site)/context/CartContext";
+import { fetchShoppingCart } from "@/app/(site)/lib/fetchShoppingCart";
 
 const BUCKET_NAME = "images";
 
@@ -40,11 +43,15 @@ type Review = {
 export default function ProductPage() {
     const params = useParams();
     const id = Number(params.id);
+    
+    const { setCartItems } = useCart();
 
     const [product, setProduct] = useState<Product | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [productReviews, setProductReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState("");
 
     useEffect(() => {
         async function fetchData() {
@@ -225,6 +232,13 @@ export default function ProductPage() {
             {/* PAGE CONTENT */}
             <div className="bg-[#F8F9FB] min-h-screen">
                 <div className="max-w-[1440px] mx-auto px-10 py-10">
+                    {showModal && (
+                    <TopModal
+                        message={modalMessage}
+                        type="success"
+                        onClose={() => setShowModal(false)}
+                    />
+                     )}
                     {/* BREADCRUMB */}
                     <Breadcrumb
                         items={[
@@ -338,7 +352,19 @@ export default function ProductPage() {
                             {/* BUTTONS */}
                             <div className="flex flex-col gap-3">
                                 <button className="w-full py-3 rounded-full border border-[#003049] text-[#003049] font-semibold hover:bg-[#003049]/10"
-                                    onClick={()=>addToCart(id)}
+                                    onClick={async () => {
+                                        await addToCart(id);
+                                        // Update cart context immediately
+                                        try {
+                                            const updatedCart = await fetchShoppingCart();
+                                            setCartItems(updatedCart);
+                                        } catch (err) {
+                                            console.error("Error updating cart context:", err);
+                                        }
+                                        
+                                        setModalMessage(`${product?.name} added to cart!`);
+                                        setShowModal(true);
+                                    }}
                                 >
                                     Add to Cart
                                 </button>

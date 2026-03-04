@@ -6,6 +6,10 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { addToWishlist } from '@/app/actions/user/AddToWishlist';
+import { removeFromWishlist } from '@/app/actions/user/RemoveFromWishlist';
+import { fetchFavorites } from '../lib/fetchFavorites';
+import Link from 'next/link';
+import TopModal from '../components/TopModal';
 
 const BUCKET_NAME = "images";
 
@@ -20,6 +24,7 @@ export default function WomensWearScroll() {
   const [womensWearData, setWomensWearData] = useState<WomensProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [wishlist, setWishlist] = useState<number[]>([]);
+  const [modal, setModal] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -69,14 +74,63 @@ export default function WomensWearScroll() {
       });
 
       setWomensWearData(mapped);
+
+      const user = (await supabase.auth.getSession()).data.session?.user.id
+      if (user) {
+        try {
+          const favorites = await fetchFavorites();
+          const favoriteIds = favorites.map(f => f.id);
+          setWishlist(favoriteIds);
+        } catch (err) {
+          console.error("Error fetching favorites:", err);
+        }
+      }
       setLoading(false);
     }
-
     fetchWomensWear();
   }, []);
 
+  const handleWishlist = async (itemId: number) => {
+    if (wishlist.includes(itemId)) {
+      // remove
+      try {
+        const res = await removeFromWishlist(itemId);
+        if (res?.success) {
+          setWishlist(prev => prev.filter(id => id !== itemId));
+          setModal({ message: "Removed from wishlist", type: "success" });
+        } else {
+          setModal({ message: "Failed to remove from wishlist", type: "error" });
+        }
+      } catch (err) {
+        console.error(err);
+        setModal({ message: "Failed to remove from wishlist", type: "error" });
+      }
+    } else {
+      // add
+      try {
+        const res = await addToWishlist(itemId);
+        if (res?.success) {
+          setWishlist(prev => [...prev, itemId]);
+          setModal({ message: "Added to wishlist", type: "success" });
+        } else {
+          setModal({ message: "Failed to add to wishlist", type: "error" });
+        }
+      } catch (err) {
+        console.error(err);
+        setModal({ message: "Failed to add to wishlist", type: "error" });
+      }
+    }
+  };
+
   return (
     <section className="w-full py-2 sm:py-10 bg-[#f8f9fa] overflow-x-hidden">
+      {modal && (
+        <TopModal
+          message={modal.message}
+          type={modal.type}
+          onClose={() => setModal(null)}
+        />
+      )}
         <div className="max-w-7xl mx-auto w-full px-0 md:px-2">
 
         <div className="bg-[#b91c1c] w-[calc(100%+4rem)] lg:w-[calc(100%+10rem)] rounded-l-[15px] flex flex-col lg:flex-row overflow-hidden relative min-h-[600px] py-8">
@@ -93,7 +147,9 @@ export default function WomensWearScroll() {
           </div>
 
           <div className="pt-12 lg:pt-0 pb-1 border-b inline-flex items-center gap-2 w-fit cursor-pointer group">
-            <span className="text-xl font-medium group-hover:text-red-100 transition">View All Product</span>
+            <Link href="/products-page?category=Women">
+              <span className="text-xl font-medium group-hover:text-red-100 transition">View All Product</span>
+            </Link>
             <MdArrowOutward className="text-2xl group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform ml-4" />
           </div>
         </div>
@@ -139,16 +195,9 @@ export default function WomensWearScroll() {
                     <button 
                       title="Heart"
                       type="button"
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        if (!wishlist.includes(item.id)) {
-                          try {
-                            await addToWishlist(item.id);
-                            setWishlist([...wishlist, item.id]);
-                          } catch (err) {
-                            console.error("Failed to add to wishlist", err);
-                          }
-                        }
+                        handleWishlist(item.id);
                       }}
                       className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors text-slate-900"
                     >
