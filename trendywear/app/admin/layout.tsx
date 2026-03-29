@@ -24,7 +24,6 @@ function AdminContent({ children }: { children: React.ReactNode }) {
     { name: "Products", icon: FiBox, href: "/admin/products" },
     { name: "Inventory", icon: FiLayers, href: "/admin/inventory" },
     { name: "Orders", icon: FiShoppingBag, href: "/admin/orders" },
-    { name: "Reports & Analytics", icon: FiBarChart2, href: "/admin/analytics" },
   ];
 
   return (
