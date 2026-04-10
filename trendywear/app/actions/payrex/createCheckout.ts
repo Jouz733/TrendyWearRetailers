@@ -4,6 +4,7 @@ type LineItems = {
     name: string;
     amount: number;
     quantity: number;
+    description: string;
     //image: string;
 }
 

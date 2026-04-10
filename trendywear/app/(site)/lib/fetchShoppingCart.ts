@@ -30,7 +30,6 @@ const user_id = user?.id;
     .eq('status', 'active')
     .maybeSingle();
 
-  // ✅ No cart yet — just return empty instead of throwing
   if (cartError || !cartForUser) {
     return [];
   }
@@ -40,11 +39,17 @@ const user_id = user?.id;
     .select(`
       id,
       quantity,
-      item:items (
+      price_at_time,
+      variant:item_variants (
         id,
-        name,
-        image_id,
-        tags
+        size,
+        color,
+        item:items (
+          id,
+          name,
+          image_id,
+          tags
+        )
       )
     `)
     .eq("cart_id", cartForUser.id);
@@ -53,7 +58,7 @@ const user_id = user?.id;
     throw error ?? new Error('No items returned');
   }
 
-  const itemIds = cart_items.map(i => i.item.id);
+  const itemIds = cart_items.map(i => i.variant.id);
   const now = new Date().toISOString();
 
   const { data: wishlisted } = await supabase
@@ -69,38 +74,23 @@ const user_id = user?.id;
     }
   }
 
-  const { data: prices } = await supabase
-      .from("prices")
-      .select("item_id, price")
-      .in("item_id", itemIds)
-      .lte("valid_from", now)
-      .or(`valid_to.is.null,valid_to.gte.${now}`)
-      .order("priority", { ascending: false });
-
-  const priceMap: Record<number, number> = {};
-  if (prices) {
-      for (const p of prices) {
-          if (!(p.item_id in priceMap)) priceMap[p.item_id] = p.price;
-      }
-  }
-
   const mapped: ShoppingCartItem[] = cart_items.map((ci) => {
-    const imageUrls = (ci.item.image_id ?? []).map(
+    const imageUrls = (ci.variant.item.image_id ?? []).map(
       (imgId: string) =>
         supabase.storage.from(BUCKET_NAME).getPublicUrl(imgId).data.publicUrl
     );
 
     return {
       id: ci.id,
-      name: ci.item.name ?? "Unnamed",
-      item_id: ci.item.id,
-      category: ci.item.tags,
-      price: priceMap[ci.item.id] ?? 0,
+      name: ci.variant.item.name ?? "Unnamed",
+      item_id: ci.variant.item.id,
+      category: ci.variant.item.tags,
+      price: ci.price_at_time,
       quantity: ci.quantity,
-      size: 'N/A',
-      color: 'N/A',
+      size: ci.variant.size,
+      color: ci.variant.color,
       image: imageUrls.length > 0 ? imageUrls[0] : "/images/placeholder.jpg",
-      isFavorite: wishlistSet.has(ci.item.id),
+      isFavorite: wishlistSet.has(ci.variant.item.id),
       isEditing: false
     };
   });

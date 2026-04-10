@@ -11,6 +11,7 @@ import { addToCart } from "@/app/actions/user/AddToCart";
 import TopModal from "../../components/TopModal";
 import { useCart } from "@/app/(site)/context/CartContext";
 import { fetchShoppingCart } from "@/app/(site)/lib/fetchShoppingCart";
+import { createCheckout } from "@/app/actions/payrex/createCheckout";
 
 const BUCKET_NAME = "images";
 
@@ -22,6 +23,8 @@ type Product = {
     price: number;
     rating: number;
     reviews: number;
+    colors: string[];
+    sizes: string[];
     is_liked: boolean;
     description: string[];
     features: string[];
@@ -136,7 +139,7 @@ export default function ProductPage() {
     const [editSubmitting, setEditSubmitting] = useState(false);
     const [editError, setEditError] = useState("");
 
-    const [colors,setColors] = useState<string[]>(["Red","Blue"]);
+    const [colors,setColors] = useState<string[]>(["Red","Beige"]);
     const [sizes,setSizes] = useState<string[]>(["XS", "S", "M", "L", "XL"]);
 
     useEffect(() => {
@@ -192,6 +195,26 @@ export default function ProductPage() {
                 }
             }
 
+            const { data: attributeData } = await supabase
+                .from('item_variants')
+                .select('color, item_id, size')
+                .in('item_id', itemIds)
+            
+            const colorMap: Record<number, Set<string>> = {};
+            const sizeMap: Record<number, Set<string>> = {};
+            if (attributeData){
+                for (const c of attributeData){
+                    if (!colorMap[c.item_id]) {
+                        colorMap[c.item_id] = new Set()
+                    }
+                    if (!sizeMap[c.item_id]) {
+                        sizeMap[c.item_id] = new Set()
+                    }
+                    colorMap[c.item_id].add(c.color)
+                    sizeMap[c.item_id].add(c.size)
+                }
+            }
+
             const mapped: Product[] = items.map((item) => {
                 const imageUrls = (item.image_id ?? []).map(
                     (imgId: string) => supabase.storage.from(BUCKET_NAME).getPublicUrl(imgId).data.publicUrl
@@ -202,6 +225,9 @@ export default function ProductPage() {
                     ? priceGroups[item.id][1]
                     : null;
                 const rd = ratingMap[item.id];
+                const uniqueColors = [...(colorMap[item.id] ?? new Set())]
+                const uniqueSizes = [...(sizeMap[item.id] ?? new Set())]
+
                 return {
                     id: item.id,
                     name: item.name ?? "Unnamed",
@@ -210,7 +236,8 @@ export default function ProductPage() {
                     oldPrice: oldPrice,
                     rating: rd ? Math.round((rd.sum / rd.count) * 10) / 10 : 0,
                     reviews: rd?.count ?? 0,
-                    colors: ["Red", "Blue", "Green", "Black", "White"],
+                    colors: uniqueColors,
+                    sizes: uniqueSizes,
                     is_liked: wishlistSet.has(item.id),
                     description: item.description ? [item.description] : [],
                     features: [],
@@ -222,6 +249,8 @@ export default function ProductPage() {
             setProduct(current);
 
             if (current) {
+                setColors(current.colors);
+                setSizes(current.sizes);
                 const { data: reviewRows } = await supabase
                     .from("reviews")
                     .select("id, user_id, item_id, rating, text, created_at")
@@ -354,8 +383,8 @@ export default function ProductPage() {
 
     const [showMore, setShowMore] = useState(false);
     const [activeTab, setActiveTab] = useState("details");
-    const [selectedSize, setSelectedSize] = useState("XS");
-    const [selectedColor, setSelectedColor] = useState("#000");
+    const [selectedSize, setSelectedSize] = useState<string | null>(null);
+    const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
     const contentRef = useRef<HTMLDivElement>(null);
     const [contentHeight, setContentHeight] = useState(0);
@@ -474,7 +503,13 @@ export default function ProductPage() {
                                 <button
                                     className="w-full py-3 rounded-full border border-[#003049] text-[#003049] font-semibold hover:bg-[#003049]/10"
                                     onClick={async () => {
-                                        await addToCart(id);
+                                        if (!selectedColor || !selectedSize) {
+                                            setModalMessage("Please select a color and size before adding to cart.");
+                                            setShowModal(true);
+                                            return;
+                                        }
+                                    
+                                        await addToCart(id,undefined,selectedSize, selectedColor);
                                         try {
                                             const updatedCart = await fetchShoppingCart();
                                             setCartItems(updatedCart.map((item) => ({ ...item, isEditing: false as const })));
@@ -486,7 +521,28 @@ export default function ProductPage() {
                                     }}>
                                     Add to Cart
                                 </button>
-                                <button className="w-full py-3 rounded-full bg-[#003049] text-[#F5F3F3] font-semibold">Buy Now</button>
+                                <button 
+                                    className="w-full py-3 rounded-full bg-[#003049] text-[#F5F3F3] font-semibold"
+                                    onClick={ async () => {
+                                        if (!selectedColor || !selectedSize) {
+                                            setModalMessage("Please select a color and size before adding to cart.");
+                                            setShowModal(true);
+                                            return;
+                                        }
+
+                                        const checkoutUrl = await createCheckout([{
+                                            name: product.name,
+                                            amount: product.price * 100,
+                                            quantity: 1
+                                            description: `Color: ${selectedColor}, Size: ${selectedSize}`
+                                        }])
+
+                                        if(checkoutUrl){
+                                            window.location.href = checkoutUrl; 
+                                        }
+                                    }}>
+                                    Buy Now
+                                </button>
                             </div>
                         </div>
                     </div>

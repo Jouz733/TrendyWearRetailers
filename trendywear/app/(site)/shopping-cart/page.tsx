@@ -26,7 +26,7 @@ export default function ShoppingCart() {
   const ASPECT_RATIO = "aspect-[6/7]";
 
   // Options for the "Edit" functionality
-  const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
+  const SIZE_OPTIONS = ['XS','S', 'M', 'L', 'XL'];
   const COLOR_OPTIONS = ['Yellow', 'Blue', 'Black', 'White'];
 
   const { cartItems, setCartItems } = useCart();
@@ -80,6 +80,7 @@ export default function ShoppingCart() {
           name: item.name,
           amount: item.price * 100, // Convert to cents
           quantity: item.quantity,
+          description: `Size: ${item.size}, Color: ${item.color}`
           //image: item.image + "?format=jpg"
         };
       })

@@ -12,6 +12,7 @@ export type Product = {
     reviews: number;
     is_liked: boolean;
     colors: string[];
+    sizes: string[];
     tags: string[];
 };
 
@@ -98,6 +99,26 @@ export async function fetchProducts(
         }
     }
 
+    const { data: attributeData } = await supabase
+                .from('item_variants')
+                .select('color, item_id, size')
+                .in('item_id', itemIds)
+            
+    const colorMap: Record<number, Set<string>> = {};
+    const sizeMap: Record<number, Set<string>> = {};
+    if (attributeData){
+        for (const c of attributeData){
+            if (!colorMap[c.item_id]) {
+                colorMap[c.item_id] = new Set()
+            }
+            if (!sizeMap[c.item_id]) {
+                sizeMap[c.item_id] = new Set()
+            }
+            colorMap[c.item_id].add(c.color)
+            sizeMap[c.item_id].add(c.size)
+        }
+    }
+    
     const mapped: Product[] = items.map((item) => {
         const imageUrls = (item.image_id ?? []).map(
             (imgId: string) =>
@@ -110,6 +131,8 @@ export async function fetchProducts(
         priceGroups[item.id]?.length > 1
             ? priceGroups[item.id][1]
             : null;
+        const uniqueColors = [...(colorMap[item.id] ?? new Set())]
+        const uniqueSizes = [...(sizeMap[item.id] ?? new Set())]
 
         return {
             id: item.id,
@@ -120,7 +143,8 @@ export async function fetchProducts(
             rating: avgRating,
             reviews: rd?.count ?? 0,
             is_liked: wishlistSet.has(item.id),
-            colors: [],
+            colors: uniqueColors,
+            sizes: uniqueSizes,
             tags: item.tags ?? [],
         };
     });

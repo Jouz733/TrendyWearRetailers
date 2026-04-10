@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 
-export async function addToCart(itemId: number, quantity: number = 1) {
+export async function addToCart(itemId: number, quantity: number = 1, size: string, color: string) {
   const supabase = await createClient()
 
   // Get logged in user
@@ -55,12 +55,23 @@ export async function addToCart(itemId: number, quantity: number = 1) {
 
   const priceAtTime = priceData?.price ?? 0
 
+  // Get the proper variant ID based on size and color
+  const { data: variantData, error: variantError } = await supabase
+    .from('item_variants')
+    .select('id')
+    .eq('item_id', itemId)
+    .eq('size', size)
+    .eq('color', color)
+    .single()
+
+  if (variantError || !variantData) throw new Error(variantError?.message || 'Variant not found')
+
   //  Check if item already exists in cart
   const { data: existingCartItem } = await supabase
     .from('cart_items')
     .select('id, quantity')
     .eq('cart_id', cartId)
-    .eq('item_id', itemId)
+    .eq('variant_id', variantData.id)
     .single()
 
   if (existingCartItem) {
@@ -79,7 +90,7 @@ export async function addToCart(itemId: number, quantity: number = 1) {
     .from('cart_items')
     .insert({
       cart_id: cartId,
-      item_id: itemId,
+      variant_id: variantData.id,
       quantity,
       price_at_time: priceAtTime,
       created_at: new Date(),

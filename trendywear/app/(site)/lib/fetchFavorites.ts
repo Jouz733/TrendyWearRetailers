@@ -6,7 +6,7 @@ export type Product = {
     id: number;
     name: string;
     images: string[];
-    oldPrice?: number;
+    oldPrice?: number | null;
     price: number;
     rating: number;
     reviews: number;
@@ -58,6 +58,7 @@ export async function fetchFavorites(tag?: string): Promise<Product[]> {
 
     const now = new Date().toISOString();
 
+    // Fetch prices
     const { data: prices } = await supabase
         .from("prices")
         .select("item_id, price")
@@ -66,11 +67,13 @@ export async function fetchFavorites(tag?: string): Promise<Product[]> {
         .or(`valid_to.is.null,valid_to.gte.${now}`)
         .order("priority", { ascending: false });
 
-    const priceMap: Record<number, number> = {};
-    if (prices) {
-        for (const p of prices) {
-            if (!(p.item_id in priceMap)) priceMap[p.item_id] = p.price;
+    const priceGroups: Record<string, number[]> = {};
+
+    for (const p of prices ?? []) {
+        if (!priceGroups[p.item_id]) {
+            priceGroups[p.item_id] = [];
         }
+        priceGroups[p.item_id].push(p.price);
     }
 
     const mapped: Product[] = items.map((item) => {
@@ -78,11 +81,18 @@ export async function fetchFavorites(tag?: string): Promise<Product[]> {
             (imgId: string) =>
                 supabase.storage.from(BUCKET_NAME).getPublicUrl(imgId).data.publicUrl
         );
+        const currentPrice: number = priceGroups[item.id]?.[0] ?? 0;
+        const oldPrice: number | null =
+        priceGroups[item.id]?.length > 1
+            ? priceGroups[item.id][1]
+            : null;
+
         return {
             id: item.id,
             name: item.name ?? "Unnamed",
             images: imageUrls.length > 0 ? imageUrls : ["/placeholder.jpg"],
-            price: priceMap[item.id] ?? 0,
+            price: currentPrice,
+            oldPrice: oldPrice,
             rating: 0,
             reviews: 0,
             is_liked: itemIds.includes(item.id),

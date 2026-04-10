@@ -34,40 +34,40 @@ export default function ProductsPage() {
     // Fetch order_items with count
     const { data: orderItems, count } = await supabase
       .from("order_items")
-      .select("id, orders_id, product_id, quantity, price_at_checkout", { count: "exact" })
+      .select("id, orders_id, variant_id, quantity, price_at_checkout", { count: "exact" })
       .order("id", { ascending: false })
       .range(from, to);
 
     if (orderItems && orderItems.length > 0) {
-      const productIds = [...new Set(orderItems.map(i => i.product_id))];
+      const productIds = [...new Set(orderItems.map(i => i.variant_id))];
 
       // Fetch item details
-      const { data: items } = await supabase
-        .from("items")
-        .select("id, name, image_id, tags")
+      const { data: data } = await supabase
+        .from("item_variants")
+        .select(`id, item:items(id, name, image_id, tags)`)
         .in("id", productIds);
-
+      
       const itemMap: Record<number, { name: string; image: string; tags: string[] }> = {};
-      (items ?? []).forEach(item => {
-        const firstImageId = item.image_id?.[0] ?? null;
+      (data ?? []).forEach(i => {
+        const firstImageId = i.item?.image_id?.[0] ?? null;
         const imageUrl = firstImageId
           ? supabase.storage.from(BUCKET_NAME).getPublicUrl(firstImageId).data.publicUrl
           : "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf";
-        itemMap[item.id] = {
-          name: item.name ?? "Unnamed",
+        itemMap[i.id] = {
+          name: i.item.name ?? "Unnamed",
           image: imageUrl,
-          tags: item.tags ?? [],
+          tags: i.item.tags ?? [],
         };
       });
 
       const mapped = orderItems.map(oi => ({
         id: oi.id,
         order_id: oi.orders_id,
-        name: itemMap[oi.product_id]?.name ?? "Unknown Item",
-        image: itemMap[oi.product_id]?.image ?? "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf",
+        name: itemMap[oi.variant_id]?.name ?? "Unknown Item",
+        image: itemMap[oi.variant_id]?.image ?? "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf",
         quantity: oi.quantity ?? 0,
         price: oi.price_at_checkout ?? 0,
-        tags: itemMap[oi.product_id]?.tags ?? [],
+        tags: itemMap[oi.variant_id]?.tags ?? [],
       }));
       return { items: mapped, count: count ?? 0 };
     }

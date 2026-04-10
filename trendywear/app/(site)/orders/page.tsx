@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { 
   MdLocalShipping, 
@@ -9,12 +9,13 @@ import {
   MdChevronRight
 } from 'react-icons/md';
 import Breadcrumb from "@/app/(site)/components/Breadcrumb";
+import { fetchOrders, OrderItems } from '../lib/fetchOrders';
 
 export default function OrderHistory() {
   const CURRENCY = "PHP";
   const ASPECT_RATIO = "aspect-[6/7]"; 
-
-  const [orders] = useState([
+  /*
+  const [orders, setOrders] = useState([
     {
       id: "ORD-99281",
       date: "Oct 12, 2025",
@@ -38,7 +39,9 @@ export default function OrderHistory() {
         { name: 'Denim Jacket', category: 'Outerwear', quantity: 1, size: 'L', color: 'Black', image: '/images/placeholder.jpg' },
       ]
     }
-  ]);
+  ]);*/
+
+  const [orders, setOrders] = useState<OrderItems[]>([]); 
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -47,6 +50,12 @@ export default function OrderHistory() {
       default: return 'text-gray-600 bg-gray-50';
     }
   };
+
+  useEffect(()=>{
+    fetchOrders().then(setOrders).catch(err => {
+      console.error('Error fetching orders:', err);
+    });
+  }, []) // Placeholder for future data fetching logic
 
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col items-center">

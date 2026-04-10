@@ -123,7 +123,7 @@ export default function ProductCard({
                         <span
                             key={i}
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: color }}
+                            style={{ backgroundColor: color, border: "1px solid #0e0e0e" }}
                         />
                     ))}
                 </div>
