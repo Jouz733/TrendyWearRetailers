@@ -74,7 +74,25 @@ export default function OrderHistory() {
 
         {/* SINGLE COLUMN ORDERS LIST */}
         <div className="space-y-8 sm:space-y-10">
-          {orders.map((order) => (
+            {orders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 transition-all duration-500">
+              <p className="text-gray-400 text-2xl font-bold uppercase tracking-[0.3em]">
+                No Orders Yet
+              </p>
+
+              <p className="text-gray-500 mt-2 text-sm">
+                You haven’t placed any orders yet.
+              </p>
+
+              <Link
+                href="/products-page"
+                className="mt-6 text-[#C1121F] font-bold underline"
+              >
+                Start Shopping
+              </Link>
+            </div>
+          ) : (
+            orders.map((order) => (
             <div key={order.id} className="bg-white rounded-[10px] overflow-hidden shadow-sm border border-gray-300">
               
               {/* Order Top Bar */}
@@ -151,7 +169,8 @@ export default function OrderHistory() {
                 </div>
               </div>            
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
     </div>

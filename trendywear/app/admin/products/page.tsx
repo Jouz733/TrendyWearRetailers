@@ -470,7 +470,7 @@ function RowMenu({ product, onEdit, onDelete, onAddSpecialPrice }: { product: Pr
   const menu = open ? (
     <div
       onMouseDown={e => e.stopPropagation()}
-      style={{ position: "absolute", top: coords.top, left: coords.left, zIndex: 99999, width: 160 }}
+      style={{ position: "absolute", top: coords.top, left: coords.left, zIndex: 99999, width: 180 }}
       className="bg-[#1C1D21] rounded-xl shadow-2xl py-1"
     >
       <button
