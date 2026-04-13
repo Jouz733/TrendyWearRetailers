@@ -1,18 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@/utils/supabase/server'  // ✅ Use server, not client
+import { createClient } from '@supabase/supabase-js'; 
 
 type ResponseData = { message: string }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>) {
-    const supabase = await createClient();
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     const body = req.body;
     return res.status(200).json({ message: `Received data: ${JSON.stringify(body)}` });
     /*
     if (req.method === 'POST') {
-        //Get User ID from Supabase Auth
-        const { data: { user }, error } = await supabase.auth.getUser();
-        const id = user?.id || 'Unknown User'
-        
         if (error || !user) {
             return res.status(401).json({ message: "User not authenticated" });
         }
@@ -27,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             .single();
 
         if (newOrderError) {
-            return res.status(400).json({ message: "Failed to create order" });
+            return res.status(400).json({ message: "Failed to create order"+${newOrderError} });
         }
 
         // Fetch the user's active cart and its items
@@ -59,6 +58,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                     
                 }))
             );
+        
+        if (insertError) {
+            return res.status(400).json({ message: "Cannot Find cart_id of User." });
+        }
 
         
 
