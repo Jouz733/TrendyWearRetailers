@@ -16,6 +16,9 @@ type InventoryItem = {
   image: string;
   price: number;
   tags: string[];
+  quantity: number;
+  rating: string;
+  sales: number;
 };
 
 export default function InventoryPage() {
@@ -44,6 +47,8 @@ export default function InventoryPage() {
 
     if (data && data.length > 0) {
       const itemIds = data.map(i => i.id);
+
+      // Fetch prices
       const { data: prices } = await supabase
         .from("prices")
         .select("item_id, price")
@@ -52,17 +57,80 @@ export default function InventoryPage() {
       const priceMap: Record<number, number> = {};
       (prices ?? []).forEach(p => { if (!(p.item_id in priceMap)) priceMap[p.item_id] = p.price; });
 
+      // Fetch variants
+      const { data: variants } = await supabase
+        .from("item_variants")
+        .select("id, item_id")
+        .in("item_id", itemIds);
+
+      const variantIds = (variants ?? []).map(v => v.id);
+
+      // Fetch inventory quantities
+      const { data: inventory } = await supabase
+        .from("inventory")
+        .select("variant_id, quantity")
+        .in("variant_id", variantIds);
+
+      const inventoryMap: Record<number, number> = {};
+      (inventory ?? []).forEach(inv => { inventoryMap[inv.variant_id] = inv.quantity; });
+
+      // Sum quantities per item
+      const itemQuantityMap: Record<number, number> = {};
+      (variants ?? []).forEach(v => {
+        const qty = inventoryMap[v.id] ?? 0;
+        itemQuantityMap[v.item_id] = (itemQuantityMap[v.item_id] ?? 0) + qty;
+      });
+
+      // Fetch ratings from reviews table
+      const { data: reviews } = await supabase
+        .from("reviews")
+        .select("item_id, rating")
+        .in("item_id", itemIds);
+
+      const ratingMap: Record<number, { total: number; count: number }> = {};
+      (reviews ?? []).forEach(r => {
+        if (!ratingMap[r.item_id]) ratingMap[r.item_id] = { total: 0, count: 0 };
+        ratingMap[r.item_id].total += r.rating;
+        ratingMap[r.item_id].count += 1;
+      });
+
+      // Fetch sales from order_items
+      const { data: orderItems } = await supabase
+        .from("order_items")
+        .select("variant_id, quantity")
+        .in("variant_id", variantIds);
+
+      // Map variant_id → item_id
+      const variantItemMap: Record<number, number> = {};
+      (variants ?? []).forEach(v => { variantItemMap[v.id] = v.item_id; });
+
+      // Sum sales per item
+      const salesMap: Record<number, number> = {};
+      (orderItems ?? []).forEach(oi => {
+        const itemId = variantItemMap[oi.variant_id];
+        if (itemId) salesMap[itemId] = (salesMap[itemId] ?? 0) + (oi.quantity ?? 1);
+      });
+
       const mapped = data.map(item => {
         const firstImageId = item.image_id?.[0] ?? null;
         const imageUrl = firstImageId
           ? supabase.storage.from(BUCKET_NAME).getPublicUrl(firstImageId).data.publicUrl
           : "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf";
+
+        const ratingData = ratingMap[item.id];
+        const avgRating = ratingData
+          ? (ratingData.total / ratingData.count).toFixed(1)
+          : "—";
+
         return {
           id: item.id,
           name: item.name ?? "Unnamed",
           image: imageUrl,
           price: priceMap[item.id] ?? 0,
           tags: item.tags ?? [],
+          quantity: itemQuantityMap[item.id] ?? 0,
+          rating: avgRating,
+          sales: salesMap[item.id] ?? 0,
         };
       });
       return { items: mapped, count: count ?? 0 };
@@ -94,7 +162,35 @@ export default function InventoryPage() {
   const toggleSelect = (id: number) =>
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  //  Tag color map ────────────────────────────────────────────────────────────
+  const handleUpdateStock = async () => {
+    if (!stockItem) return;
+    const supabase = createClient();
+    const newQty = parseInt(stockInput) || 0;
+
+    const { data: variants } = await supabase
+      .from("item_variants")
+      .select("id")
+      .eq("item_id", stockItem.id);
+
+    if (variants && variants.length > 0) {
+      const upsertData = variants.map(v => ({
+        variant_id: v.id,
+        quantity: newQty,
+        updated_at: new Date().toISOString(),
+      }));
+
+      await supabase
+        .from("inventory")
+        .upsert(upsertData, { onConflict: "variant_id" });
+    }
+
+    setItems(prev => prev.map(i =>
+      i.id === stockItem.id ? { ...i, quantity: newQty } : i
+    ));
+    setStockItem(null);
+    setStockInput("");
+  };
+
   const TAG_COLORS: Record<string, string> = {
     Women:       "bg-pink-100 text-pink-700",
     Men:         "bg-blue-100 text-blue-700",
@@ -117,28 +213,28 @@ export default function InventoryPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <h2 className="text-xl font-bold text-[#1C1D21] mb-4">Update Stock</h2>
             <div className="flex items-center justify-center gap-5 my-6">
-            <button
-              onClick={() => setStockInput(String(Math.max(0, Number(stockInput || 0) - 1)))}
-              className="w-12 h-12 rounded-full bg-red-100 hover:bg-red-200 text-red-600 text-xl font-bold"
-            >
-              −
-            </button>
-            <input
-              type="number"
-              value={stockInput}
-              onChange={(e) => setStockInput(e.target.value)}
-              className="w-24 text-center border border-black rounded-xl px-3 py-3 text-base font-semibold appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            />
-            <button
-              onClick={() => setStockInput(String(Number(stockInput || 0) + 1))}
-              className="w-12 h-12 rounded-full bg-green-100 hover:bg-green-200 text-green-600 text-xl font-bold"
-            >
-              +
-            </button>
-          </div>
+              <button
+                onClick={() => setStockInput(String(Math.max(0, Number(stockInput || 0) - 1)))}
+                className="w-12 h-12 rounded-full bg-red-100 hover:bg-red-200 text-red-600 text-xl font-bold"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                value={stockInput}
+                onChange={(e) => setStockInput(e.target.value)}
+                className="w-24 text-center border border-black rounded-xl px-3 py-3 text-base font-semibold appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <button
+                onClick={() => setStockInput(String(Number(stockInput || 0) + 1))}
+                className="w-12 h-12 rounded-full bg-green-100 hover:bg-green-200 text-green-600 text-xl font-bold"
+              >
+                +
+              </button>
+            </div>
             <div className="flex justify-end gap-2">
               <button onClick={() => { setStockItem(null); setStockInput(""); }} className="px-5 py-2 rounded-xl text-gray-400 hover:bg-gray-100 text-sm font-medium">Cancel</button>
-              <button onClick={() => { setStockItem(null); setStockInput(""); }} className="px-5 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700">Update Stock</button>
+              <button onClick={handleUpdateStock} className="px-5 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700">Update Stock</button>
             </div>
           </div>
         </div>
@@ -154,7 +250,9 @@ export default function InventoryPage() {
             >
               <button
                 onClick={() => {
-                  setStockItem(items.find(i => i.id === menuItemId) || null);
+                  const item = items.find(i => i.id === menuItemId) || null;
+                  setStockItem(item);
+                  setStockInput(String(item?.quantity ?? 0));
                   setMenuItemId(null);
                 }}
                 className="flex items-center gap-2.5 w-full px-4 py-3 text-sm font-medium text-green-400 hover:bg-white/10 hover:text-green-300 transition"
@@ -212,15 +310,15 @@ export default function InventoryPage() {
                 <span className="font-semibold text-[16px] text-[#1C1D21]">{item.name}</span>
               </div>
               <div className="col-span-1 text-center">
-                <p className="font-bold text-[15px] text-[#1C1D21]">—</p>
+                <p className="font-bold text-[15px] text-[#1C1D21]">{item.sales}</p>
                 <span className="text-[10px] font-bold text-[#8181A5] uppercase tracking-wider">Sales</span>
               </div>
               <div className="col-span-1 text-center">
-                <p className="font-bold text-[15px] text-[#1C1D21]">—</p>
+                <p className="font-bold text-[15px] text-[#1C1D21]">{item.quantity}</p>
                 <span className="text-[10px] font-bold text-[#8181A5] uppercase tracking-wider">Qty.</span>
               </div>
               <div className="col-span-2 text-center">
-                <p className="font-bold text-[15px] text-[#1C1D21]">—</p>
+                <p className="font-bold text-[15px] text-[#1C1D21]">{item.rating} / 5.0</p>
                 <span className="text-[10px] font-bold text-[#8181A5] uppercase tracking-wider">Rating</span>
               </div>
               <div className="col-span-2 text-center">
