@@ -8,6 +8,8 @@ export async function createItem(data: {
   tags: string
   /** Storage object paths under bucket `images` (uploaded from the client). Empty → placeholder. */
   image_paths: string[] | null
+  sizes: string[]
+  colors: string[]
   basePrice: number
 }) {
   const supabase = await createClient()

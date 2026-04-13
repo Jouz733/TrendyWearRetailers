@@ -288,8 +288,8 @@ function AddItemModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
           tags: JSON.stringify(tagsArray),
           image_paths,
           basePrice: parseFloat(form.basePrice),
-          sizes: JSON.stringify(form.sizes),  
-          colors: JSON.stringify(form.colors), 
+          sizes: form.sizes,  
+          colors: form.colors, 
         });
         onSuccess();
         onClose();
